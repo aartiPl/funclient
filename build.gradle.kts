@@ -49,21 +49,21 @@ val developersSpec = Action<MavenPomDeveloperSpec> {
 }
 
 val scmSpec = Action<MavenPomScm> {
-    connection.set("scm:git:git://https://github.com/aartiPl/typeutils.git")
-    developerConnection.set("scm:git:ssh:https://github.com/aartiPl/typeutils.git")
-    url.set("https://github.com/aartiPl/typeutils/tree/master")
+    connection.set("scm:git:git://https://github.com/aartiPl/funclient.git")
+    developerConnection.set("scm:git:ssh:https://github.com/aartiPl/funclient.git")
+    url.set("https://github.com/aartiPl/funclient/tree/master")
 }
 
 publishing {
     publications {
-        create<MavenPublication>("typeutils") {
-            artifactId = "typeutils"
+        create<MavenPublication>("funclient") {
+            artifactId = "funclient"
             from(components["java"])
 
             pom {
-                name.set("typeutils")
-                description.set("TypeUtils - library for type safe utilities")
-                url.set("https://github.com/aartiPl/typeutils")
+                name.set("funclient")
+                description.set("FunClient - HTTP client - functional way")
+                url.set("https://github.com/aartiPl/funclient")
 
                 licenses(licencesSpec)
                 developers(developersSpec)
@@ -87,7 +87,7 @@ publishing {
 }
 
 signing {
-    sign(publishing.publications["typeutils"])
+    sign(publishing.publications["funclient"])
 }
 
 dependencies {
@@ -96,6 +96,8 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.4")
 
     implementation("org.apache.commons:commons-lang3:3.12.0")
+    implementation("com.konghq:unirest-java:3.13.13")
+    implementation("com.google.code.gson:gson:2.10")
 
     testImplementation("org.junit.platform:junit-platform-suite-engine:1.9.0")
     testImplementation("org.junit.platform:junit-platform-suite-api:1.9.0")
