@@ -1,8 +1,8 @@
-val kotlinVersion: String = "1.8.22"
+val kotlinVersion = "2.1.21"
 
 plugins {
-    kotlin("jvm") version "1.8.22"
-    id("com.adarshr.test-logger") version "3.2.0"
+    kotlin("jvm") version "2.1.21"
+    id("com.adarshr.test-logger") version "4.0.0"
     `maven-publish`
     signing
     idea
@@ -17,7 +17,7 @@ repositories {
 
 java {
     toolchain {
-        languageVersion.set(JavaLanguageVersion.of(11))
+        languageVersion.set(JavaLanguageVersion.of(17))
     }
 
     withJavadocJar()
@@ -93,17 +93,17 @@ signing {
 dependencies {
     implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlinVersion")
     implementation("org.jetbrains.kotlin:kotlin-reflect:$kotlinVersion")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.4")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2")
 
-    implementation("org.apache.commons:commons-lang3:3.12.0")
-    implementation("com.konghq:unirest-java:3.13.13")
-    implementation("com.google.code.gson:gson:2.10")
+    implementation("org.apache.commons:commons-lang3:3.17.0")
+    implementation("com.konghq:unirest-java:3.14.5")
+    implementation("com.google.code.gson:gson:2.13.1")
 
     testImplementation("org.junit.platform:junit-platform-suite-engine:1.9.0")
     testImplementation("org.junit.platform:junit-platform-suite-api:1.9.0")
     testImplementation("org.junit.platform:junit-platform-suite-commons:1.9.0")
     testImplementation("org.junit.jupiter:junit-jupiter-engine:5.9.0")
     testImplementation("org.junit.jupiter:junit-jupiter-params:5.9.0")
-    testImplementation("com.willowtreeapps.assertk:assertk-jvm:0.26.1")
-    testImplementation("io.mockk:mockk:1.13.2")
+    testImplementation("com.willowtreeapps.assertk:assertk-jvm:0.28.1")
+    testImplementation("io.mockk:mockk:1.14.4")
 }
