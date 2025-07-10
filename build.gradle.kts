@@ -1,27 +1,21 @@
 val kotlinVersion = "2.1.21"
 
 plugins {
+    idea
     kotlin("jvm") version "2.1.21"
     id("com.adarshr.test-logger") version "4.0.0"
-    `maven-publish`
-    signing
-    idea
+    id("com.vanniktech.maven.publish") version "0.33.0"
 }
 
 group = "net.igsoft"
-version = "0.5.0"
+version = "0.6.0"
 
 repositories {
     mavenCentral()
 }
 
-java {
-    toolchain {
-        languageVersion.set(JavaLanguageVersion.of(17))
-    }
-
-    withJavadocJar()
-    withSourcesJar()
+kotlin {
+    jvmToolchain(17)
 }
 
 testlogger {
@@ -33,77 +27,52 @@ tasks.test {
     useJUnitPlatform()
 }
 
-val licencesSpec = Action<MavenPomLicenseSpec> {
-    license {
-        name.set("MIT License")
-        url.set("https://opensource.org/licenses/MIT")
-    }
-}
+mavenPublishing {
+    pom {
+        name.set("funclient")
+        description.set("FunClient - HTTP client - functional way")
+        url.set("https://github.com/aartiPl/funclient")
 
-val developersSpec = Action<MavenPomDeveloperSpec> {
-    developer {
-        id.set("aartiPl")
-        name.set("Marcin Kuszczak")
-        email.set("aarti@interia.pl")
-    }
-}
-
-val scmSpec = Action<MavenPomScm> {
-    connection.set("scm:git:git://https://github.com/aartiPl/funclient.git")
-    developerConnection.set("scm:git:ssh:https://github.com/aartiPl/funclient.git")
-    url.set("https://github.com/aartiPl/funclient/tree/master")
-}
-
-publishing {
-    publications {
-        create<MavenPublication>("funclient") {
-            artifactId = "funclient"
-            from(components["java"])
-
-            pom {
-                name.set("funclient")
-                description.set("FunClient - HTTP client - functional way")
-                url.set("https://github.com/aartiPl/funclient")
-
-                licenses(licencesSpec)
-                developers(developersSpec)
-                scm(scmSpec)
+        licenses {
+            license {
+                name.set("MIT License")
+                url.set("https://opensource.org/licenses/MIT")
             }
+        }
+        developers {
+            developer {
+                id.set("aartiPl")
+                name.set("Marcin Kuszczak")
+                email.set("aarti@interia.pl")
+            }
+        }
+        scm {
+            connection.set("scm:git:git://https://github.com/aartiPl/funclient.git")
+            developerConnection.set("scm:git:ssh:https://github.com/aartiPl/funclient.git")
+            url.set("https://github.com/aartiPl/funclient/tree/master")
         }
     }
 
-    repositories {
-        maven {
-            val releasesRepoUrl = "https://oss.sonatype.org/service/local/staging/deploy/maven2/"
-            val snapshotsRepoUrl = "https://oss.sonatype.org/content/repositories/snapshots/"
-            url = uri(if (project.version.toString().endsWith("SNAPSHOT")) snapshotsRepoUrl else releasesRepoUrl)
-
-            credentials {
-                username = project.findProperty("sonatype.user") as String? ?: System.getenv("SONATYPE_USER")
-                password = project.findProperty("sonatype.password") as String? ?: System.getenv("SONATYPE_PASSWORD")
-            }
-        }
-    }
-}
-
-signing {
-    sign(publishing.publications["funclient"])
+    publishToMavenCentral()
+    signAllPublications()
 }
 
 dependencies {
     implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlinVersion")
     implementation("org.jetbrains.kotlin:kotlin-reflect:$kotlinVersion")
+
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2")
 
     implementation("org.apache.commons:commons-lang3:3.17.0")
-    implementation("com.konghq:unirest-java:3.14.5")
     implementation("com.google.code.gson:gson:2.13.1")
 
-    testImplementation("org.junit.platform:junit-platform-suite-engine:1.9.0")
-    testImplementation("org.junit.platform:junit-platform-suite-api:1.9.0")
-    testImplementation("org.junit.platform:junit-platform-suite-commons:1.9.0")
-    testImplementation("org.junit.jupiter:junit-jupiter-engine:5.9.0")
-    testImplementation("org.junit.jupiter:junit-jupiter-params:5.9.0")
+    val junitVersion = "6.0.0-M1"
+    testImplementation("org.junit.platform:junit-platform-suite-engine:$junitVersion")
+    testImplementation("org.junit.platform:junit-platform-suite-api:$junitVersion")
+    testImplementation("org.junit.platform:junit-platform-suite-commons:$junitVersion")
+    testImplementation("org.junit.jupiter:junit-jupiter-engine:$junitVersion")
+    testImplementation("org.junit.jupiter:junit-jupiter-params:$junitVersion")
+
     testImplementation("com.willowtreeapps.assertk:assertk-jvm:0.28.1")
     testImplementation("io.mockk:mockk:1.14.4")
 }

@@ -1,44 +1,48 @@
 package net.igsoft.funclient
 
 import com.google.gson.Gson
-import kong.unirest.Unirest
-import net.igsoft.funclient.handler.ResponseHandler
 import net.igsoft.funclient.model.*
+import java.net.http.HttpClient
+import java.net.http.HttpRequest
+import java.net.http.HttpResponse
+import kotlin.io.path.Path
 
-//TODO: create common content types
+//NOTE: Doesn't work with JDK8
+@Suppress("unused")
 class FunClient(val gson: Gson) {
-    init {
-        //socket timeout - time to receive the data
-        // 300_000 == 5m
-        Unirest.config().reset().socketTimeout(300_000).connectTimeout(2_000)
-    }
-
-    fun <T> execute(request: Request, responseHandler: ResponseHandler<T>): T {
-        return responseHandler.handle(request, execute(request), gson)
-    }
+    private val client = HttpClient.newHttpClient()
 
     fun execute(request: Request): Response {
-        val uniRequest = Unirest.request(request.method.name, request.url.toString())
+        val httpRequestBuilder = HttpRequest.newBuilder()
+
+        when (request.method) {
+            Method.GET -> httpRequestBuilder.GET()
+            Method.POST -> httpRequestBuilder.POST(resolveBody(request))
+            Method.PUT -> httpRequestBuilder.PUT(resolveBody(request))
+            Method.DELETE -> httpRequestBuilder.DELETE()
+            Method.PATCH -> httpRequestBuilder.method("PATCH", resolveBody(request))
+            Method.HEAD -> httpRequestBuilder.method("HEAD", resolveBody(request))
+            Method.OPTIONS -> httpRequestBuilder.method("OPTIONS", resolveBody(request))
+        }
+
+        httpRequestBuilder.uri(request.url.toURI())
 
         for (header in request.headers.all.entries) {
             for (value in header.value) {
-                uniRequest.header(header.key, value)
+                httpRequestBuilder.header(header.key, value)
             }
         }
 
-        val finalRequest = when (request.body) {
-            is StringBody -> uniRequest.body(request.body.string)
-            is FileBody -> uniRequest.body(request.body.file.readBytes())
-            is ObjectBody<*> -> uniRequest.body(gson.toJson(request.body.value))
-            is EmptyBody -> uniRequest
-            else -> throw IllegalStateException("Unknown body type: ${request.body::class.simpleName}")
-        }
+        val response = client.send(httpRequestBuilder.build(), HttpResponse.BodyHandlers.ofString())
 
-        val response = finalRequest.asString()
+        return RawResponse(response.statusCode(), Headers(response.headers().map()), StringBody(response.body()))
+    }
 
-        val headersBuilder = Headers.builder()
-        response.headers.all().forEach { headersBuilder.append(it.name, it.value) }
-
-        return RawResponse(response.status, headersBuilder.build(), StringBody(response.body))
+    private fun resolveBody(request: Request): HttpRequest.BodyPublisher = when (request.body) {
+        is StringBody -> HttpRequest.BodyPublishers.ofString(request.body.string)
+        is EmptyBody -> HttpRequest.BodyPublishers.noBody()
+        is FileBody -> HttpRequest.BodyPublishers.ofFile(Path(request.body.file.path))
+        is ObjectBody<*> -> HttpRequest.BodyPublishers.ofString(gson.toJson(request.body.value))
+        else -> throw IllegalStateException("Unknown body type: ${request.body::class.simpleName}")
     }
 }
