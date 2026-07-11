@@ -1,21 +1,21 @@
-val kotlinVersion = "2.1.21"
+val kotlinVersion = "2.4.0"
 
 plugins {
     idea
-    kotlin("jvm") version "2.1.21"
+    kotlin("jvm") version "2.4.0"
     id("com.adarshr.test-logger") version "4.0.0"
-    id("com.vanniktech.maven.publish") version "0.33.0"
+    id("com.vanniktech.maven.publish") version "0.34.0"
 }
 
 group = "net.igsoft"
-version = "0.6.0"
+version = "0.6.1"
 
 repositories {
     mavenCentral()
 }
 
 kotlin {
-    jvmToolchain(17)
+    jvmToolchain(21)
 }
 
 testlogger {
@@ -61,18 +61,17 @@ dependencies {
     implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlinVersion")
     implementation("org.jetbrains.kotlin:kotlin-reflect:$kotlinVersion")
 
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.11.0")
 
-    implementation("org.apache.commons:commons-lang3:3.17.0")
-    implementation("com.google.code.gson:gson:2.13.1")
+    implementation("org.apache.commons:commons-lang3:3.20.0")
+    implementation("com.google.code.gson:gson:2.14.0")
 
-    val junitVersion = "6.0.0-M1"
+    val junitVersion = "6.1.0"
     testImplementation("org.junit.platform:junit-platform-suite-engine:$junitVersion")
     testImplementation("org.junit.platform:junit-platform-suite-api:$junitVersion")
-    testImplementation("org.junit.platform:junit-platform-suite-commons:$junitVersion")
     testImplementation("org.junit.jupiter:junit-jupiter-engine:$junitVersion")
     testImplementation("org.junit.jupiter:junit-jupiter-params:$junitVersion")
 
     testImplementation("com.willowtreeapps.assertk:assertk-jvm:0.28.1")
-    testImplementation("io.mockk:mockk:1.14.4")
+    testImplementation("io.mockk:mockk:1.14.11")
 }
