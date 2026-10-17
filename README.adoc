@@ -1,2 +1,9 @@
 = funclient
 
+`FunClient(gson, strict = true)` rejects GET and DELETE requests with any body other than
+`EmptyBody` by throwing `IllegalArgumentException` before file reads or network execution.
+An explicitly empty `StringBody` is still a body.
+
+Use `FunClient(gson, strict = false)` when the target API explicitly supports GET or DELETE
+bodies. This mode sends the supplied body, including streaming `FileBody` uploads.
+Other methods behave identically in both modes. The client adds no application-level retries.
