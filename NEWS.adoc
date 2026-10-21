@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 == [Unreleased]
 
+=== Changed
+
+* Split HTTP transport into `funclient-core` and the optional JSON adapter into
+  `funclient-serializer/serializer-kotlinx`, published as separate libraries.
+* Require `Serializer` in `FunClient` and response handlers, and full declared
+  Kotlin types in `ObjectBody`, `ObjectResponseHandler` and `TypedResponseHandler`.
+* Add `KotlinxSerializer` with caller-provided `Json` configuration and serializer module.
+* Add `Body.empty`, `Body.text`, `Body.file` and `Body.serialized` factories;
+  serialized bodies support both reified type capture and an explicit `KType`.
+* Rename `Headers` constants to Kotlin's `UPPER_SNAKE_CASE` convention.
+
 == [0.5.0] - <date>
 
 === Added

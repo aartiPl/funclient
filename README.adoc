@@ -1,9 +1,145 @@
-= funclient
+= FunClient
 
-`FunClient(gson, strict = true)` rejects GET and DELETE requests with any body other than
-`EmptyBody` by throwing `IllegalArgumentException` before file reads or network execution.
-An explicitly empty `StringBody` is still a body.
+FunClient is a synchronous HTTP client for Java 21. HTTP transport depends only on a
+small serialization contract; JSON support is an optional adapter.
 
-Use `FunClient(gson, strict = false)` when the target API explicitly supports GET or DELETE
-bodies. This mode sends the supplied body, including streaming `FileBody` uploads.
-Other methods behave identically in both modes. The client adds no application-level retries.
+== Modules and dependencies
+
+* `funclient-core` — HTTP transport, models, `Serializer`, request bodies and response handlers.
+* `funclient-serializer` — groups adapters and does not publish an artifact.
+* `funclient-serializer/serializer-kotlinx` — JSON adapter using kotlinx.serialization.
+
+[source,kotlin]
+----
+plugins {
+    kotlin("jvm") version "2.4.0"
+    kotlin("plugin.serialization") version "2.4.0"
+}
+
+dependencies {
+    implementation("net.igsoft:funclient-core:0.7.0")
+    implementation("net.igsoft:serializer-kotlinx:0.7.0")
+}
+----
+
+The core can be used on its own with any implementation of `Serializer`.
+The adapter exposes its core and JSON dependencies transitively. The serialization
+compiler plugin is needed in applications that use generated `@Serializable` models.
+
+== Requests and responses
+
+[source,kotlin]
+----
+import java.net.URI
+import kotlin.reflect.typeOf
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
+import net.igsoft.funclient.FunClient
+import net.igsoft.funclient.handler.ObjectResponseHandler
+import net.igsoft.funclient.handler.TypedResponseHandler
+import net.igsoft.funclient.model.*
+import net.igsoft.funclient.serializer.kotlinx.KotlinxSerializer
+
+@Serializable
+data class Item(val id: Int, val name: String)
+
+val serializer = KotlinxSerializer(Json {
+    ignoreUnknownKeys = true
+    // serializersModule = yourModule
+})
+val client = FunClient(serializer = serializer)
+val responseType = typeOf<List<Item?>?>()
+val request = Request(
+    method = Method.POST,
+    url = URI("https://example.com/items").toURL(),
+    headers = Headers.builder().append(Headers.CONTENT_TYPE, "application/json").build(),
+    body = Body.serialized<List<Item?>?>(listOf(Item(1, "first"), null)),
+)
+val response = client.execute(request)
+val items = ObjectResponseHandler<List<Item?>?>(responseType)
+    .handle(request, response, serializer)
+val typedResponse = TypedResponseHandler<List<Item?>?>(responseType)
+    .handle(request, response, serializer)
+// typedResponse preserves status, headers and the declared type in its ObjectBody.
+----
+
+Use the `Body` factories to create request bodies:
+
+[source,kotlin]
+----
+Body.empty()                         // the EmptyBody singleton
+Body.text("hello")                   // raw text
+Body.file(java.io.File("upload.bin")) // streamed file
+Body.serialized(Item(1, "first"))    // captures the declared Item type
+Body.serialized<List<Item?>>(listOf(Item(1, "first"), null))
+Body.serialized<Item?>(null)
+Body.serialized(listOf(Item(1, "first"), null), typeOf<List<Item?>?>())
+----
+
+`Body.serialized(value)` captures the full declared type through a reified type
+parameter, including generic arguments and nullability. Specify the type argument
+when you need a particular nullable or base type. The overload
+`Body.serialized(value, type)` accepts an explicit `KType` for dynamically described
+types. Both factories return `ObjectBody<T>` and defer serialization until request
+execution. The existing body constructors remain available.
+
+`Body.text("hello")` sends raw text; `Body.serialized("hello")` delegates to the
+serializer (JSON encodes the string with quotes). For explicit types, supply the
+full declared `KType` and ensure that it describes the value. The type argument of
+a response handler must match its supplied `KType`.
+
+The adapter uses the supplied `Json` configuration and its `SerializersModule` for
+serializer lookup and conversion. Models require generated or custom serializers;
+register contextual serializers in that module when needed. Serialization errors,
+including missing serializers, reach the caller unchanged.
+
+`ObjectResponseHandler` and `TypedResponseHandler` deserialize only statuses 200–299;
+other statuses throw `IllegalStateException` before deserialization.
+`RawResponseHandler` returns the original response for every status.
+
+== HTTP behavior
+
+`FunClient(serializer, strict = true)` rejects GET and DELETE requests with any body
+other than `EmptyBody` by throwing `IllegalArgumentException` before serialization,
+file reads or network execution. An explicitly empty `StringBody` is still a body.
+
+Use `FunClient(serializer, strict = false)` when the target API explicitly supports
+GET or DELETE bodies. This mode sends the supplied body, including streaming
+`FileBody` uploads. Other methods behave identically in both modes. The client adds
+no application-level retries. Request and response headers preserve multiple values.
+`EmptyBody`, UTF-8 `StringBody`, `FileBody` and `ObjectBody` remain supported.
+
+== Migration for Amiops
+
+* Replace the former single `net.igsoft:funclient` dependency with the core and chosen
+  adapter coordinates above.
+* Create and retain a `Serializer`, pass it to `FunClient(serializer = ...)`, and
+  pass the same instance to response handlers. The client no longer exposes its serializer.
+* Create bodies with `Body.empty()`, `Body.text(value)`, `Body.file(file)` or
+  `Body.serialized<DeclaredType>(value)`. Use `Body.serialized(value, type)` when
+  the full declared `KType` is supplied dynamically.
+* Construct `ObjectResponseHandler<T>` and `TypedResponseHandler<T>` with `typeOf<T>()`.
+* Update custom `ResponseHandler.handle` implementations to accept `Serializer`.
+* Use `UPPER_SNAKE_CASE` names for header constants, for example `Headers.CONTENT_TYPE`.
+* Add generated or custom serializers to application models and configure `Json`
+  and its module explicitly. The old serialization API has been removed.
+
+Amiops itself is outside the scope of this repository change.
+
+== Build and publication
+
+[source,shell]
+----
+./gradlew :funclient-core:test :funclient-core:build \
+  :funclient-serializer:serializer-kotlinx:test \
+  :funclient-serializer:serializer-kotlinx:build
+git diff --check
+----
+
+`./gradlew build` also builds and tests both libraries. Both use the Java 21 toolchain.
+Project, toolchain, plugin and dependency versions are centralized in
+`gradle/libs.versions.toml`.
+The publishing plugin prepares independent binary, sources and Maven
+metadata for `net.igsoft:funclient-core:0.7.0` and
+`net.igsoft:serializer-kotlinx:0.7.0`. The root and grouping project publish no library.
+Remote publication uses the existing Maven Central signing and credential setup.

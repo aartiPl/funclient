@@ -1,77 +1,83 @@
-val kotlinVersion = "2.4.0"
+import com.vanniktech.maven.publish.MavenPublishBaseExtension
+import org.jetbrains.kotlin.gradle.dsl.KotlinJvmProjectExtension
 
 plugins {
+    base
     idea
-    kotlin("jvm") version "2.4.0"
-    id("com.adarshr.test-logger") version "4.0.0"
-    id("com.vanniktech.maven.publish") version "0.34.0"
+    alias(libs.plugins.kotlin.jvm) apply false
+    alias(libs.plugins.kotlin.serialization) apply false
+    alias(libs.plugins.maven.publish) apply false
 }
 
-group = "net.igsoft"
-version = "0.6.2"
+val funclientVersion = libs.versions.funclient.get()
 
-repositories {
-    mavenCentral()
+allprojects {
+    group = "net.igsoft"
+    version = funclientVersion
 }
 
-kotlin {
-    jvmToolchain(21)
-}
+// Only these two projects produce libraries. The root and adapter group are aggregators.
+configure(listOf(project(":funclient-core"), project(":funclient-serializer:serializer-kotlinx"))) {
+    repositories {
+        mavenCentral()
+    }
 
-testlogger {
-    showStandardStreams = true
-    showFullStackTraces = false
-}
-
-tasks.test {
-    useJUnitPlatform()
-}
-
-mavenPublishing {
-    pom {
-        name.set("funclient")
-        description.set("FunClient - HTTP client - functional way")
-        url.set("https://github.com/aartiPl/funclient")
-
-        licenses {
-            license {
-                name.set("MIT License")
-                url.set("https://opensource.org/licenses/MIT")
-            }
+    plugins.withId("org.jetbrains.kotlin.jvm") {
+        extensions.configure<KotlinJvmProjectExtension> {
+            jvmToolchain(libs.versions.jvm.get().toInt())
         }
-        developers {
-            developer {
-                id.set("aartiPl")
-                name.set("Marcin Kuszczak")
-                email.set("aarti@interia.pl")
-            }
-        }
-        scm {
-            connection.set("scm:git:git://https://github.com/aartiPl/funclient.git")
-            developerConnection.set("scm:git:ssh:https://github.com/aartiPl/funclient.git")
-            url.set("https://github.com/aartiPl/funclient/tree/master")
+
+        dependencies {
+            "testImplementation"(libs.junit.jupiter.api)
+            "testImplementation"(libs.junit.jupiter.params)
+            "testRuntimeOnly"(libs.junit.jupiter.engine)
+            "testRuntimeOnly"(libs.junit.platform.launcher)
+            "testImplementation"(libs.assertk)
         }
     }
 
-    publishToMavenCentral()
-    signAllPublications()
+    tasks.withType<Test>().configureEach {
+        useJUnitPlatform()
+    }
+
+    plugins.withId("com.vanniktech.maven.publish") {
+        extensions.configure<MavenPublishBaseExtension> {
+            coordinates(group.toString(), project.name, version.toString())
+            pom {
+                name.set(project.name)
+                description.set(if (project.name == "funclient-core") "FunClient HTTP transport and serialization contract" else "FunClient kotlinx.serialization JSON adapter")
+                url.set("https://github.com/aartiPl/funclient")
+                licenses {
+                    license {
+                        name.set("MIT License")
+                        url.set("https://opensource.org/licenses/MIT")
+                    }
+                }
+                developers {
+                    developer {
+                        id.set("aartiPl")
+                        name.set("Marcin Kuszczak")
+                        email.set("aarti@interia.pl")
+                        organization.set("Marcin Kuszczak")
+                        organizationUrl.set("https://github.com/aartiPl")
+                    }
+                }
+                scm {
+                    connection.set("scm:git:https://github.com/aartiPl/funclient.git")
+                    developerConnection.set("scm:git:ssh://git@github.com/aartiPl/funclient.git")
+                    url.set("https://github.com/aartiPl/funclient")
+                }
+            }
+            publishToMavenCentral()
+            signAllPublications()
+        }
+    }
 }
 
-dependencies {
-    implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlinVersion")
-    implementation("org.jetbrains.kotlin:kotlin-reflect:$kotlinVersion")
+tasks.named("build") {
+    dependsOn(":funclient-core:build", ":funclient-serializer:serializer-kotlinx:build")
+}
 
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.11.0")
-
-    implementation("org.apache.commons:commons-lang3:3.20.0")
-    implementation("com.google.code.gson:gson:2.14.0")
-
-    val junitVersion = "6.1.0"
-    testImplementation("org.junit.platform:junit-platform-suite-engine:$junitVersion")
-    testImplementation("org.junit.platform:junit-platform-suite-api:$junitVersion")
-    testImplementation("org.junit.jupiter:junit-jupiter-engine:$junitVersion")
-    testImplementation("org.junit.jupiter:junit-jupiter-params:$junitVersion")
-
-    testImplementation("com.willowtreeapps.assertk:assertk-jvm:0.28.1")
-    testImplementation("io.mockk:mockk:1.14.11")
+tasks.named("check") {
+    dependsOn(":funclient-core:check", ":funclient-serializer:serializer-kotlinx:check")
 }
