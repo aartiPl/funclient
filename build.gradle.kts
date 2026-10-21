@@ -12,7 +12,7 @@ plugins {
 val funclientVersion = libs.versions.funclient.get()
 
 allprojects {
-    group = "net.igsoft"
+    group = "net.igsoft.funclient"
     version = funclientVersion
 }
 
@@ -42,9 +42,10 @@ configure(listOf(project(":funclient-core"), project(":funclient-serializer:seri
 
     plugins.withId("com.vanniktech.maven.publish") {
         extensions.configure<MavenPublishBaseExtension> {
-            coordinates(group.toString(), project.name, version.toString())
+            val artifactId = if (project.name == "serializer-kotlinx") "funclient-serializer-kotlinx" else project.name
+            coordinates(group.toString(), artifactId, version.toString())
             pom {
-                name.set(project.name)
+                name.set(artifactId)
                 description.set(if (project.name == "funclient-core") "FunClient HTTP transport and serialization contract" else "FunClient kotlinx.serialization JSON adapter")
                 url.set("https://github.com/aartiPl/funclient")
                 licenses {
