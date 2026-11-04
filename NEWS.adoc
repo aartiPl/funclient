@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 == [Unreleased]
 
+== [0.7.1] - 2026-11-04
+
+=== Added
+
+* Add `FileBody(file, offset = 0, length = null)` for streaming file ranges with
+  known content length and bounded memory. Validate ranges, detect premature EOF,
+  and close streams on completion, failure and cancellation. `Body` is unchanged.
+
 === Changed
 
 * Split HTTP transport into `funclient-core` and the optional JSON adapter into
@@ -18,9 +26,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   serialized bodies support both reified type capture and an explicit `KType`.
 * Rename `Headers` constants to Kotlin's `UPPER_SNAKE_CASE` convention.
 
-== [0.5.0] - <date>
+== Release template
+
+== [<version>] - <date>
 
 === Added
 
-
 === Fixed
+
+=== Changed

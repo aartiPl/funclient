@@ -12,7 +12,6 @@ import net.igsoft.funclient.model.StringBody
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
-import kotlin.io.path.Path
 
 //NOTE: Doesn't work with JDK8
 @Suppress("unused")
@@ -51,7 +50,7 @@ class FunClient(private val serializer: Serializer, private val strict: Boolean 
     private fun resolveBody(request: Request): HttpRequest.BodyPublisher = when (request.body) {
         is StringBody -> HttpRequest.BodyPublishers.ofString(request.body.string)
         is EmptyBody -> HttpRequest.BodyPublishers.noBody()
-        is FileBody -> HttpRequest.BodyPublishers.ofFile(Path(request.body.file.path))
+        is FileBody -> FileBodyPublisher.create(request.body)
         is ObjectBody<*> -> HttpRequest.BodyPublishers.ofString(serializer.serialize(request.body.value, request.body.type))
         else -> throw IllegalStateException("Unknown body type: ${request.body::class.simpleName}")
     }

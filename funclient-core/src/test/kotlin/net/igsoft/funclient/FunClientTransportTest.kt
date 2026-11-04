@@ -47,6 +47,8 @@ class FunClientTransportTest {
                 Body.text("") to emptyList(),
                 Body.text("żółć") to "żółć".toByteArray().toList(),
                 Body.file(file) to fileBytes.toList(),
+                FileBody(file, 1, 3) to fileBytes.copyOfRange(1, 4).toList(),
+                FileBody(file, fileBytes.size.toLong(), 0) to emptyList(),
                 objectBody to serializer.encoded.toByteArray().toList(),
                 inferredBody to serializer.encoded.toByteArray().toList(),
                 Body.serialized<List<Map<String, Int?>>?>(null) to serializer.encoded.toByteArray().toList(),

@@ -21,7 +21,15 @@ class FunClientBodyTest {
     fun `strict rejects explicit bodies before reading files or connecting`() {
         val serializer = RecordingSerializer()
         for (method in listOf(Method.GET, Method.DELETE)) {
-            for (body in listOf(StringBody(""), StringBody("text"), ObjectBody(mapOf("id" to 1), typeOf<Map<String, Int>>()), ObjectBody(null, typeOf<String?>()), FileBody(java.io.File("missing-upload")))) {
+            val bodies = listOf(
+                StringBody(""),
+                StringBody("text"),
+                ObjectBody(mapOf("id" to 1), typeOf<Map<String, Int>>()),
+                ObjectBody(null, typeOf<String?>()),
+                FileBody(java.io.File("missing-upload")),
+                FileBody(java.io.File("missing-upload"), 10, 0),
+            )
+            for (body in bodies) {
                 val failure = runCatching {
                     FunClient(serializer).execute(Request(method, java.net.URI("http://127.0.0.1:1/").toURL(), body = body))
                 }.exceptionOrNull()

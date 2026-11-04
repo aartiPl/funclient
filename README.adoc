@@ -109,22 +109,41 @@ GET or DELETE bodies. This mode sends the supplied body, including streaming
 no application-level retries. Request and response headers preserve multiple values.
 `EmptyBody`, UTF-8 `StringBody`, `FileBody` and `ObjectBody` remain supported.
 
-== Migration for Amiops
+=== File uploads and byte ranges
 
-* Replace the former single `net.igsoft:funclient` dependency with the core and chosen
-  adapter coordinates above.
-* Create and retain a `Serializer`, pass it to `FunClient(serializer = ...)`, and
-  pass the same instance to response handlers. The client no longer exposes its serializer.
-* Create bodies with `Body.empty()`, `Body.text(value)`, `Body.file(file)` or
-  `Body.serialized<DeclaredType>(value)`. Use `Body.serialized(value, type)` when
-  the full declared `KType` is supplied dynamically.
-* Construct `ObjectResponseHandler<T>` and `TypedResponseHandler<T>` with `typeOf<T>()`.
-* Update custom `ResponseHandler.handle` implementations to accept `Serializer`.
-* Use `UPPER_SNAKE_CASE` names for header constants, for example `Headers.CONTENT_TYPE`.
-* Add generated or custom serializers to application models and configure `Json`
-  and its module explicitly. The old serialization API has been removed.
+`FileBody` describes a file or a byte range; the HTTP transport streams it without
+loading the file into memory. The `Body` interface and `Body.file(file)` factory
+are unchanged. Use the constructor for a range:
 
-Amiops itself is outside the scope of this repository change.
+[source,kotlin]
+----
+FileBody(file)                           // entire file; same as Body.file(file)
+FileBody(file, offset = 1024)             // from byte 1024 to the end
+FileBody(file, offset = 1024, length = 512) // exactly 512 bytes
+----
+
+`offset: Long = 0` is zero-based and `length: Long? = null` means the remaining
+bytes. Numeric arguments must be non-negative and their sum must not overflow
+`Long`; violations throw `IllegalArgumentException` during construction.
+Each execution checks that the path is a readable regular file, the offset is at
+most the file size, and the range fits. Invalid bounds or a non-regular file throw
+`IllegalArgumentException`; missing files and access/read failures throw `IOException`.
+Zero length is valid anywhere up to and including the end of the file.
+
+The transport fixes the range length before connecting and reports a known
+content length, including zero. It seeks directly to the offset and reads only the
+selected range using bounded buffers. Subsequent file growth does not add bytes.
+Premature EOF, including truncation between validation and opening the stream,
+fails the request with `EOFException` (possibly wrapped in an `IOException` by the
+HTTP client). Resources are closed on completion, failure and cancellation.
+Each subscription opens its own stream for the fixed range.
+
+Keep the file unchanged while sending: the client does not snapshot its contents
+or detect same-size modifications or truncation beyond the selected range.
+Strict GET/DELETE rules also apply to empty file ranges, before file access.
+Existing constructor calls remain source compatible, including the single-file
+Java constructor. Adding data-class properties changes the binary signatures of
+generated `copy` methods; recompile callers built against the former class.
 
 == Build and publication
 
