@@ -1,5 +1,5 @@
 [versions]
-funclient = "0.7.1"
+funclient = "0.8.0"
 jvm = "21"
 kotlin = "2.4.0"
 maven-publish = "0.34.0"

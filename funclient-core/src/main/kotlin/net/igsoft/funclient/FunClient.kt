@@ -2,6 +2,7 @@ package net.igsoft.funclient
 
 import net.igsoft.funclient.model.EmptyBody
 import net.igsoft.funclient.model.FileBody
+import net.igsoft.funclient.model.FileResponseBodyTarget
 import net.igsoft.funclient.model.Headers
 import net.igsoft.funclient.model.Method
 import net.igsoft.funclient.model.ObjectBody
@@ -12,6 +13,9 @@ import net.igsoft.funclient.model.StringBody
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
+import java.nio.file.Files
+import java.nio.file.LinkOption
+import java.nio.file.StandardCopyOption
 
 //NOTE: Doesn't work with JDK8
 @Suppress("unused")
@@ -42,9 +46,39 @@ class FunClient(private val serializer: Serializer, private val strict: Boolean 
             }
         }
 
+        val target = request.responseBodyTarget as? FileResponseBodyTarget
+        if (target != null) return receiveFile(httpRequestBuilder.build(), target)
         val response = client.send(httpRequestBuilder.build(), HttpResponse.BodyHandlers.ofString())
 
         return RawResponse(response.statusCode(), Headers(response.headers().map()), StringBody(response.body()))
+    }
+
+    private fun receiveFile(request: HttpRequest, target: FileResponseBodyTarget): Response {
+        val file = target.file.toPath().toAbsolutePath().normalize()
+        require(Files.isDirectory(file.parent)) { "Response destination parent must exist: ${file.parent}" }
+        require(!Files.isSymbolicLink(file) && (!Files.exists(file, LinkOption.NOFOLLOW_LINKS) ||
+            target.overwrite && Files.isRegularFile(file, LinkOption.NOFOLLOW_LINKS))) {
+            "Response destination exists or is not a regular file: $file"
+        }
+        val response = client.send(request, HttpResponse.BodyHandlers.ofInputStream())
+        val headers = Headers(response.headers().map())
+        if (response.statusCode() !in 200..299) {
+            val text = response.body().use { it.bufferedReader(Charsets.UTF_8).readText() }
+            return RawResponse(response.statusCode(), headers, StringBody(text))
+        }
+        val temporary = try { Files.createTempFile(file.parent, ".funclient-response-", ".tmp") }
+        catch (failure: Exception) {
+            try { response.body().close() } catch (cleanup: Exception) { failure.addSuppressed(cleanup) }
+            throw failure
+        }
+        try {
+            val count = response.body().use { input -> Files.newOutputStream(temporary).use { output -> input.copyTo(output) } }
+            if (target.overwrite) Files.move(temporary, file, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING)
+            else Files.move(temporary, file)
+            return RawResponse(response.statusCode(), headers, FileBody(file.toFile(), length = count))
+        } finally {
+            Files.deleteIfExists(temporary)
+        }
     }
 
     private fun resolveBody(request: Request): HttpRequest.BodyPublisher = when (request.body) {

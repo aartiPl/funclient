@@ -17,8 +17,8 @@ plugins {
 }
 
 dependencies {
-    implementation("net.igsoft:funclient-core:0.7.0")
-    implementation("net.igsoft:serializer-kotlinx:0.7.0")
+    implementation("net.igsoft.funclient:funclient-core:0.8.0")
+    implementation("net.igsoft.funclient:funclient-serializer-kotlinx:0.8.0")
 }
 ----
 
@@ -145,6 +145,19 @@ Existing constructor calls remain source compatible, including the single-file
 Java constructor. Adding data-class properties changes the binary signatures of
 generated `copy` methods; recompile callers built against the former class.
 
+=== File responses
+
+`Request.responseBodyTarget` is data: `TextResponseBodyTarget` retains text reception;
+`FileResponseBodyTarget(file, overwrite = false)` streams statuses 200–299 into a file.
+Other statuses return `StringBody` and leave the destination unchanged. Redirects are
+returned to the caller. `FileBody` in a successful response identifies the completed
+file with offset zero and the exact received length, including empty and partial responses.
+
+The parent directory must exist. Callers provide exclusive access to the destination.
+The transport writes a temporary sibling and installs it after reception completes;
+overwrite requires atomic replacement support. Failures remove staging and preserve
+an existing destination. The file is never appended to. Model construction performs no I/O.
+
 == Build and publication
 
 [source,shell]
@@ -159,6 +172,6 @@ git diff --check
 Project, toolchain, plugin and dependency versions are centralized in
 `gradle/libs.versions.toml`.
 The publishing plugin prepares independent binary, sources and Maven
-metadata for `net.igsoft:funclient-core:0.7.0` and
-`net.igsoft:serializer-kotlinx:0.7.0`. The root and grouping project publish no library.
+metadata for `net.igsoft.funclient:funclient-core:0.8.0` and
+`net.igsoft.funclient:funclient-serializer-kotlinx:0.8.0`. The root and grouping project publish no library.
 Remote publication uses the existing Maven Central signing and credential setup.

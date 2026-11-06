@@ -6,5 +6,6 @@ data class Request(
     val method: Method,
     val url: URL,
     val headers: Headers = EmptyHeaders,
-    val body: Body = EmptyBody
+    val body: Body = EmptyBody,
+    val responseBodyTarget: ResponseBodyTarget = TextResponseBodyTarget,
 )
